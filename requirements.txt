@@ -1,0 +1,6 @@
+-i https://pypi.org/simple
+
+numpy==1.20.2
+
+pygame==2.0.1
+
