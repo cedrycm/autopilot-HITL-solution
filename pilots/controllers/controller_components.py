@@ -267,9 +267,7 @@ class SpeedController(Detector):
             else:
                 theta = 0
         #update airspeed        
-        self._v_y = (v_x_sum * atan(radians(theta))) - self._wind_vector_y
-
-        
+        self._v_y = (v_x_sum * atan(radians(theta))) - self._wind_vector_y      
 
     def avoid_collision(self, lidar_samples):
         theta_last = MAX_LIDAR_ANGLE
@@ -321,7 +319,7 @@ class PackageController:
             self._drop_flag = PackageFlags.DONT_DROP_PACKAGE
         else:
             # reset drop timestamp once no longer in area of previous drop
-            self._drop_timestamp = 0
+            self._drop_timestamp = current_time
             if self.contains(current_drop_pos):
                 self._drop_flag = PackageFlags.DROP_PACKAGE
                 self._drop_timestamp = current_time
@@ -332,3 +330,4 @@ class PackageController:
 
         # give a smaller buffer radius to account for wind fluctuation
         return delta_x ** 2 + delta_y ** 2 < (DELIVERY_SITE_RADIUS - 1.0) ** 2
+     

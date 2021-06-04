@@ -92,30 +92,100 @@ class ArduinoPilot(AutoPilot):
     # idk just a thought! :-)
 
     def __init(self):
+        self.telemetry_buffer = None
+        self.emergency_counter = 0
+        self.timeout = 3
         self.arduino = serial.Serial(
-            port=arduino_nano['PORT'], baudrate=arduino_nano['BAUD_RATE'])
+            port=arduino_nano["PORT"], baudrate=arduino_nano["BAUD_RATE"]
+        )
+        time.sleep(3)
 
     def interpret_telemetry(self, buffer):
-        self.arduino.write(buffer)
+        # store telemetry for emergency case
+        self.telemetry_buffer = buffer
+        self.__send_packet(buffer)
 
     def send_command(self):
-        buf = self.arduino.readline()
-        if(buf == COMMAND_STRUCT.size):
+        """Interface for reading data out of arduino controller and pipeing it
+        back into zip_sim"""
+
+        payload = None
+        start_time = time.time()
+        while payload == None and time.time() < (start_time + self.timeout):
+            payload = self.__read_packet()
+
+        if payload != None:
             try:
-                sys.stdout.buffer.write(buf)
+                sys.stdout.buffer.write(payload)
                 sys.stdout.flush()
             except struct.error as e:
                 raise e
             return None
+        else:
+            payload = self.__emergency_command()
 
-    def pid_control(self):
-        # skeleton method for autopilot pid
+            if payload == None:
+                return None
 
-        # self.pid = PID(1, 0.1, 0.05, setpoint=1)
-        # self.col_pid = PID(-1.0, -0.1, 0)
-        # self.pid.sample_time = 0.01  # Update every 0.01 seconds
-        # self.col_pid.sample_time = 0.01  # Update every 0.01 seconds
-        return None
+    def __send_packet(self, buffer):
+        tx = b"\x10\x02"  # start sequence
+        tx += struct.pack(">B", TELEMETRY_STRUCT.size)  # length of data
+        tx += buffer
+        tx += struct.pack(">B", self.__calc_checksum(buffer))
+        tx += b"\x10\x03"  # end sequence
+        print("Sending:", tx.hex())
+        self.arduino.write(tx)
+
+    def __emergency_command(self):
+        """Returns emergency command to negate lateral wind velocity if
+        arduino connection fails
+
+        returns empty after arbitrary 10 tries"""
+
+        if self.emergency_counter < 10:
+            telemetry = TELEMETRY_STRUCT.unpack(self.telemetry_struct)
+            wind_vector_y = float(telemetry[3])
+            self.emergency_counter += 1
+
+            return COMMAND_STRUCT.pack(0, -wind_vector_y, "zip")
+        else:
+            return None
+
+    def __calc_checksum(data):
+        calculated_checksum = 0
+        for byte in data:
+            calculated_checksum ^= byte
+        return calculated_checksum
+
+    def __read_packet(self):
+        """Return received data in the packet if read sucessfully, else return None"""
+        # check start sequence
+        if self.arduino.read() != b"\x10":
+            return None
+
+        if self.arduino.read() != b"\x02":
+            return None
+
+        payload_len = self.arduino.read()[0]
+        if payload_len != COMMAND_STRUCT.size:
+            # could be other type of packet, but not implemented for now
+            return None
+
+        # we don't know if it is valid yet
+        payload = self.arduino.read(payload_len)
+
+        checksum = self.arduino.read()[0]
+        if checksum != self.__calc_checksum(payload):
+            return None  # checksum error
+
+        # check end sequence
+        if self.arduino.read() != b"\x10":
+            return None
+        if self.arduino.read() != b"\x03":
+            return None
+
+        # valid packet received
+        return payload
 
 
 class ManualPilot1(ManualPilot):
