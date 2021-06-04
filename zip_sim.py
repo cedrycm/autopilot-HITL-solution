@@ -347,7 +347,7 @@ def cast_lidar(start_pos, objects):
 
 
 if __name__ == "__main__":
-    file1 = open("telem_file.bin","wb")
+    #file1 = open("telem_file.bin","wb")
     parser = argparse.ArgumentParser(description='"8-bit" Zip Sim')
     parser.add_argument(
         "pilot", nargs=argparse.REMAINDER, help="A pilot process to run"
@@ -494,23 +494,22 @@ if __name__ == "__main__":
             lateral_airspeed = max(-30.0, min(30.0, lateral_airspeed_input))
             drop_package_commanded = bool(drop_package_commanded_byte)
         elif not headless:
-            loop_count = 0
-            lidar_samples = cast_lidar(vehicle.position, lidar_objects)
-#########################################################
-            file1.write( TELEMETRY_STRUCT.pack(
-                    int(loop_count * DT_SEC * 1e3) & 0xFFFF,
-                    round(RECOVERY_X - vehicle.position[0]),
-                    wind.vector[0],
-                    wind.vector[1],
-                    round(
-                        (-vehicle.position[1] + WORLD_WIDTH_HALF) % WORLD_WIDTH
-                        - WORLD_WIDTH_HALF
-                    ),
-                    *lidar_samples
-                ))
+            # loop_count = 0
+            # lidar_samples = cast_lidar(vehicle.position, lidar_objects)
 
-            loop_count += 1    
-#########################################################
+            # file1.write( TELEMETRY_STRUCT.pack(
+            #         int(loop_count * DT_SEC * 1e3) & 0xFFFF,
+            #         round(RECOVERY_X - vehicle.position[0]),
+            #         wind.vector[0],
+            #         wind.vector[1],
+            #         round(
+            #             (-vehicle.position[1] + WORLD_WIDTH_HALF) % WORLD_WIDTH
+            #             - WORLD_WIDTH_HALF
+            #         ),
+            #         *lidar_samples
+            #     ))
+
+            # loop_count += 1    
 
             keys = pygame.key.get_pressed()
             lateral_airspeed -= lateral_airspeed / 0.5 * DT_SEC
