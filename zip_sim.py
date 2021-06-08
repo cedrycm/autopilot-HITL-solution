@@ -616,7 +616,7 @@ if __name__ == "__main__":
                     if e.type == pygame.QUIT or (
                         e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE
                     ):
-                        file1.close()
+                        # file1.close()
                         result = SIM_QUIT
                         wait_for_step = False
                         break

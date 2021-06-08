@@ -1,7 +1,6 @@
 # libraries for class structure
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Type
 import struct
 import sys
 import serial
@@ -11,11 +10,13 @@ from .controllers.controller_creator import AutoControlCreator
 from zip_sim import TELEMETRY_STRUCT, COMMAND_STRUCT
 from .config import arduino_nano
 
+
+ARDUINO_COMMAND_STRUCT = struct.Struct("<fB3s")  # struct for little endian conversion
+
+
 # ----------BASE CLASS DEFINITIONS----------------------------------------------
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-
-
 class Pilot(ABC):
     @abstractmethod
     def interpret_telemetry(self):
@@ -59,8 +60,8 @@ class Autopilot1(AutoPilot):
     __slots__ = []
     _padding = "zip"
 
-    def __init__(self):
-        self.ctrl = AutoControlCreator()
+    def __init__(self, controller):
+        self.ctrl = controller
 
     def send_command(self):
         # retrieve data from controller
@@ -84,21 +85,18 @@ class Autopilot1(AutoPilot):
     def interpret_telemetry(self, telemetry_struct):
         # method for autopilot1 to interpret telemetry data
         self.ctrl.receive_data(TELEMETRY_STRUCT.unpack(telemetry_struct))
+        return None
 
 
 class ArduinoPilot(AutoPilot):
-    # boilerplace code for class to represent different potential autopilot configurations
-    # could be swapped during flight or selected based on flight conditions
-    # idk just a thought! :-)
+    _padding = "zip"
 
-    def __init(self):
+    def __init__(self):
+        self.arduino = serial.Serial("COM3", timeout=1, baudrate=38400)
         self.telemetry_buffer = None
         self.emergency_counter = 0
         self.timeout = 3
-        self.arduino = serial.Serial(
-            port=arduino_nano["PORT"], baudrate=arduino_nano["BAUD_RATE"]
-        )
-        time.sleep(3)
+        # time.sleep(3)
 
     def interpret_telemetry(self, buffer):
         # store telemetry for emergency case
@@ -116,7 +114,14 @@ class ArduinoPilot(AutoPilot):
 
         if payload != None:
             try:
-                sys.stdout.buffer.write(payload)
+                (lateral_airspeed, drop_flag, _) = ARDUINO_COMMAND_STRUCT.unpack(
+                    payload
+                )
+                sys.stdout.buffer.write(
+                    COMMAND_STRUCT.pack(
+                        lateral_airspeed, drop_flag, self._padding.encode()
+                    )
+                )
                 sys.stdout.flush()
             except struct.error as e:
                 raise e
@@ -129,11 +134,10 @@ class ArduinoPilot(AutoPilot):
 
     def __send_packet(self, buffer):
         tx = b"\x10\x02"  # start sequence
-        tx += struct.pack(">B", TELEMETRY_STRUCT.size)  # length of data
+        tx += struct.pack("<B", 44)  # length of data
         tx += buffer
-        tx += struct.pack(">B", self.__calc_checksum(buffer))
+        tx += struct.pack("<B", self.__calc_checksum(buffer))
         tx += b"\x10\x03"  # end sequence
-        print("Sending:", tx.hex())
         self.arduino.write(tx)
 
     def __emergency_command(self):
@@ -143,22 +147,24 @@ class ArduinoPilot(AutoPilot):
         returns empty after arbitrary 10 tries"""
 
         if self.emergency_counter < 10:
-            telemetry = TELEMETRY_STRUCT.unpack(self.telemetry_struct)
-            wind_vector_y = float(telemetry[3])
+            telemetry = TELEMETRY_STRUCT.unpack(self.telemetry_buffer)
+            v_y = float(telemetry[3]) * -1
             self.emergency_counter += 1
 
-            return COMMAND_STRUCT.pack(0, -wind_vector_y, "zip")
+            return COMMAND_STRUCT.pack(v_y, 0, self._padding.encode())
         else:
             return None
 
-    def __calc_checksum(data):
+    def __calc_checksum(self, data):
         calculated_checksum = 0
         for byte in data:
             calculated_checksum ^= byte
         return calculated_checksum
 
     def __read_packet(self):
-        """Return received data in the packet if read sucessfully, else return None"""
+        """
+        :return received data in the packet if read sucessfully, else return None
+        """
         # check start sequence
         if self.arduino.read() != b"\x10":
             return None
@@ -167,7 +173,7 @@ class ArduinoPilot(AutoPilot):
             return None
 
         payload_len = self.arduino.read()[0]
-        if payload_len != COMMAND_STRUCT.size:
+        if payload_len != ARDUINO_COMMAND_STRUCT.size:
             # could be other type of packet, but not implemented for now
             return None
 
@@ -184,7 +190,7 @@ class ArduinoPilot(AutoPilot):
         if self.arduino.read() != b"\x03":
             return None
 
-        # valid packet received
+        # yeah valid packet received
         return payload
 
 

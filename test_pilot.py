@@ -1,5 +1,5 @@
-import os, sys, struct, math, subprocess
-import numpy as np
+import sys
+
 
 from collections import namedtuple
 
@@ -9,29 +9,39 @@ from pilots.pilot_creator import select_autopilot, select_manualpilot
 # set stdin to read bytes
 stdin = sys.stdin.buffer
 
-def run_pilot():
-    """autopilot selection is done with the provided function 
-    
-    -for autopilots use 'select_autopilot() 
+
+def run_pilot(pilot_select="AUTO"):
+    """autopilot selection is done with the provided function
+
+    -for autopilots use 'select_autopilot()
     -for manual piloting use 'select_manualpilot()"""
-    
-    #Concrete Pilot Selection 
-    pilot = select_autopilot(1)
 
-    while True:
-        try:
-            # for tele_input in TELEMETRY_STRUCT.iter_unpack(sys.stdin.buffer.read()):
-            tele_input = bytearray(stdin.read(TELEMETRY_STRUCT.size))
-            
-            pilot.interpret_telemetry(tele_input)
-            pilot.send_command()
-            
-            if "Exit" == tele_input:
-                break
+    if (
+        pilot_select == "AUTO" or pilot_select == "UNO"
+    ):  # currently only two pilot implementations
+        # Concrete Pilot Selection
+        pilot = select_autopilot(pilot_select)
 
-        except (BrokenPipeError, IOError):
-            #ignore subprocess flush command
-            pass
+        while True:
+            try:
+                # for tele_input in TELEMETRY_STRUCT.iter_unpack(sys.stdin.buffer.read()):
+                tele_input = bytearray(stdin.read(TELEMETRY_STRUCT.size))
+
+                pilot.interpret_telemetry(tele_input)
+                pilot.send_command()
+
+                # if "Exit" == tele_input:
+                #     break
+
+            except (BrokenPipeError, IOError):
+                # ignore subprocess flush command
+                pass
+
 
 if __name__ == "__main__":
-    run_pilot()
+    pilot_select = None
+    if len(sys.argv) > 1:
+        pilot_select = sys.argv[1]
+        run_pilot(pilot_select)
+    else:
+        run_pilot()

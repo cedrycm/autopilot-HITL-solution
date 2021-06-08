@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Type
 
+import serial
+
 # concrete classes
 from .pilot_concrete import ArduinoPilot, Autopilot1, ManualPilot1
 
@@ -15,7 +17,7 @@ from .controllers.controller_creator import AutoControlCreator
 # Import functions below to create concrete pilot classes
 
 
-def select_autopilot(autopilot_id: int):
+def select_autopilot(autopilot_id: str):
     return AutoPilotCreator.create_pilot(autopilot_id)
 
 
@@ -40,12 +42,12 @@ class AutoPilotCreator(PilotCreator):
     # 1: Path Kinematics-based Autopilot Controller
     # 2: TODO: Experimental PID for pilot_concrete.autopilot2 class?
     @classmethod
-    def create_pilot(self, autopilot_id: int):
-        if autopilot_id == 1:
+    def create_pilot(self, autopilot_id: str):
+        if autopilot_id == "AUTO":
             controller = AutoControlCreator.create_controller()
             return Autopilot1(controller)
-        elif autopilot_id == 2:
-            return ArduinoPilot() #Arduino pilot
+        elif autopilot_id == "UNO":
+            return ArduinoPilot()  # Arduino pilot
 
 
 class ManualPilotCreator(PilotCreator):
