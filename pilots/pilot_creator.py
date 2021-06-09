@@ -39,15 +39,12 @@ class PilotCreator(ABC):
 class AutoPilotCreator(PilotCreator):
     # build and return an AutoPilot(AP) class
     # AP IDs:
-    # 1: Path Kinematics-based Autopilot Controller
-    # 2: TODO: Experimental PID for pilot_concrete.autopilot2 class?
+    # 1: AUTO: Path Kinematics-based Autopilot Controller
+    # 2: UNO: Arduino Autopilot MicroController over serial bus
     @classmethod
     def create_pilot(self, autopilot_id: str):
-        if autopilot_id == "AUTO":
-            controller = AutoControlCreator.create_controller()
-            return Autopilot1(controller)
-        elif autopilot_id == "UNO":
-            return ArduinoPilot()  # Arduino pilot
+        controller = AutoControlCreator.create_controller(autopilot_id)
+        return Autopilot1(controller)
 
 
 class ManualPilotCreator(PilotCreator):

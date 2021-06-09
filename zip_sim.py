@@ -141,7 +141,7 @@ class Camera(Entity):
         self._scale_inv = 1.0 / scale
 
     def project(self, position):
-        """ Projects a point in world coordinates to points in camera pixel space. """
+        """Projects a point in world coordinates to points in camera pixel space."""
         camera_x, camera_y = self.position
         # world Y / screen X gets wrapped asymmetrically because it gets projected twice
         projected_x = round(
@@ -347,7 +347,7 @@ def cast_lidar(start_pos, objects):
 
 
 if __name__ == "__main__":
-    #file1 = open("telem_file.bin","wb")
+    # file1 = open("telem_file.bin","wb")
     parser = argparse.ArgumentParser(description='"8-bit" Zip Sim')
     parser.add_argument(
         "pilot", nargs=argparse.REMAINDER, help="A pilot process to run"
@@ -492,6 +492,7 @@ if __name__ == "__main__":
                 _,
             ) = COMMAND_STRUCT.unpack(cmd)
             lateral_airspeed = max(-30.0, min(30.0, lateral_airspeed_input))
+            print(lateral_airspeed)
             drop_package_commanded = bool(drop_package_commanded_byte)
         elif not headless:
             # loop_count = 0
@@ -509,7 +510,7 @@ if __name__ == "__main__":
             #         *lidar_samples
             #     ))
 
-            # loop_count += 1    
+            # loop_count += 1
 
             keys = pygame.key.get_pressed()
             lateral_airspeed -= lateral_airspeed / 0.5 * DT_SEC
@@ -667,5 +668,5 @@ if __name__ == "__main__":
             sum((x - 1 for x in package_count_by_site.values() if x > 1))
         )
     )
-    
+
     sys.exit(result)
