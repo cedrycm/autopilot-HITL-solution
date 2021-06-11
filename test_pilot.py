@@ -26,9 +26,9 @@ def run_pilot(pilot_select="AUTO"):
             try:
                 # for tele_input in TELEMETRY_STRUCT.iter_unpack(sys.stdin.buffer.read()):
                 tele_input = bytearray(stdin.read(TELEMETRY_STRUCT.size))
-
-                pilot.interpret_telemetry(tele_input)
-                pilot.send_command()
+                if tele_input != None:
+                    pilot.interpret_telemetry(tele_input)
+                    pilot.send_command()
 
                 # if "Exit" == tele_input:
                 #     break

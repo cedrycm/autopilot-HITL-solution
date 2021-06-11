@@ -1,9 +1,9 @@
-import serial
-import time
-import struct
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import IntFlag
+import serial
+import time
+import struct
 
 from .controller_components import SpeedController, PackageController
 from zip_sim import TELEMETRY_STRUCT, COMMAND_STRUCT
@@ -81,8 +81,10 @@ class AutoController1(AutoController):
 
         super().__init__()
 
-    def receive_data(self, telemetry):
+    def receive_data(self, telemetry_buffer):
         # method for autopilot1 to interpret telemetry data
+        telemetry = TELEMETRY_STRUCT.unpack(telemetry_buffer)
+
         timestamp = telemetry[0]
         recovery_x_error = telemetry[1]
         wind_vector_x = float(telemetry[2])
@@ -150,10 +152,11 @@ class ArduinoController(AutoController):
         self.telemetry_buffer = None
         self.emergency_counter = 0
 
-    def receive_data(self, telemetry):
-        # store telemetry for emergency case
-        self.telemetry_buffer = telemetry
-        self.__send_packet(telemetry)
+    def receive_data(self, telemetry_buffer):
+        if telemetry_buffer != None:
+            # store telemetry for emergency case
+            self.telemetry_buffer = telemetry_buffer
+            self.__send_packet(telemetry_buffer)
 
     def return_data(self):
         """Interface for reading data out of arduino controller and pipeing it
@@ -166,6 +169,11 @@ class ArduinoController(AutoController):
 
         if payload != None:
             (lateral_airspeed, drop_flag, _) = ARDUINO_COMMAND_STRUCT.unpack(payload)
+
+        else:
+            (lateral_airspeed, drop_flag) = self.__emergency_command()
+
+        return (lateral_airspeed, drop_flag)
 
     def __send_packet(self, buffer):
         tx = b"\x10\x02"  # start sequence
@@ -186,7 +194,7 @@ class ArduinoController(AutoController):
             v_y = float(telemetry[3]) * -1
             self.emergency_counter += 1
 
-            return COMMAND_STRUCT.pack(v_y, 0, self._padding.encode())
+            return (v_y, 0)
         else:
             return None
 
@@ -227,3 +235,35 @@ class ArduinoController(AutoController):
 
         # yeah valid packet received
         return payload
+
+
+# class ArduinoController2(AutoController):
+#     def __init__(self):
+#         self.arduino = serial.Serial(
+#             arduino["port"], timeout=arduino["timeout"], baudrate=arduino["baud"]
+#         )
+#         time.sleep(1)
+#         self.telemetry_buffer = None
+#         self.emergency_counter = 0
+
+#     def receive_data(self, telemetry_buffer):
+#         # method for autopilot1 to interpret telemetry data
+#         telemetry = TELEMETRY_STRUCT.unpack(telemetry_buffer)
+
+#         tx_data = {
+#             "timestamp": telemetry[0],
+#             "recovery_x_error": telemetry[1],
+#             "wind_vector_x": float(telemetry[2]),
+#             "wind_vector_y": float(telemetry[3]),
+#             "recovery_y_error": telemetry[4],
+#             "lidar_samples": list(telemetry[5:])[::-1],
+#         }
+#         self.telemetry_buffer = telemetry
+
+#         self.__send_packet(telemetry_buffer)
+
+#     def return_data(self):
+#         pass
+
+#     def __send_packet(self, telemetry_buffer):
+#         pass

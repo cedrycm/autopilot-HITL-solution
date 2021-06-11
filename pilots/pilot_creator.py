@@ -6,7 +6,7 @@ from typing import Type
 import serial
 
 # concrete classes
-from .pilot_concrete import ArduinoPilot, Autopilot1, ManualPilot1
+from .pilot_concrete import Autopilot1, ManualPilot1
 
 from .controllers.controller_creator import AutoControlCreator
 

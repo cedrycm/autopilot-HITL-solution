@@ -494,24 +494,9 @@ if __name__ == "__main__":
             lateral_airspeed = max(-30.0, min(30.0, lateral_airspeed_input))
             print(lateral_airspeed)
             drop_package_commanded = bool(drop_package_commanded_byte)
+            print("Airspeed: ", lateral_airspeed_input)
+            print("Drop: ", drop_package_commanded)
         elif not headless:
-            # loop_count = 0
-            # lidar_samples = cast_lidar(vehicle.position, lidar_objects)
-
-            # file1.write( TELEMETRY_STRUCT.pack(
-            #         int(loop_count * DT_SEC * 1e3) & 0xFFFF,
-            #         round(RECOVERY_X - vehicle.position[0]),
-            #         wind.vector[0],
-            #         wind.vector[1],
-            #         round(
-            #             (-vehicle.position[1] + WORLD_WIDTH_HALF) % WORLD_WIDTH
-            #             - WORLD_WIDTH_HALF
-            #         ),
-            #         *lidar_samples
-            #     ))
-
-            # loop_count += 1
-
             keys = pygame.key.get_pressed()
             lateral_airspeed -= lateral_airspeed / 0.5 * DT_SEC
             if keys[pygame.K_LEFT]:
