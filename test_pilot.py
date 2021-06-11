@@ -4,7 +4,7 @@ import sys
 from collections import namedtuple
 
 from zip_sim import TELEMETRY_STRUCT
-from pilots.pilot_creator import select_autopilot, select_manualpilot
+from src.pilots.pilot_creator import select_autopilot, select_manualpilot
 
 # set stdin to read bytes
 stdin = sys.stdin.buffer
