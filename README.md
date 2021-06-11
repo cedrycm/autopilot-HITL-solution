@@ -95,10 +95,21 @@ pipenv shell
 ```
 ## 🎈 Usage <a name="usage"></a>
 
-To run the Zip Simulator with this autopilot:
+To run the Zip Simulation with this autopilot:
 ```
 python zip_sim.py python test_pilot.py
 ```
+
+The [test_pilot](https://github.com/cedrycm/zip-autopilot-solution/blob/master/test_pilot.py) will default to using the python controller for the pilot.
+
+To run the simulation with the [AutoPilot-uno](https://github.com/cedrycm/autopilot-uno) controller, use the following command: 
+```
+python zip_sim.py python test_pilot.py AUTO 
+```
+This allows you to select an interface to pipe data to and from the simulation to an Arduino through the ArduinoController interface located in [controller_creator](https://github.com/cedrycm/zip-autopilot-solution/blob/master/src/pilots/controllers/controller_creator.py)
+
+Use the [config](https://github.com/cedrycm/zip-autopilot-solution/blob/master/src/pilots/config.py) file to adjust settings to your arduino accordingly.
+
 ## ✍️ Authors <a name = "authors"></a>
 
 - [@cedryc-midy](https://www.linkedin.com/in/cedryc-midy/) - conception and develoment of piloting system
