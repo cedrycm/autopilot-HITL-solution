@@ -1,1 +1,1 @@
-arduino = {"port": "COM3", "baud": 38400, "timeout": 1}
+arduino = {"port": "COM3", "baud": 38400, "timeout": 2}

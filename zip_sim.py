@@ -378,7 +378,9 @@ if __name__ == "__main__":
 
     if api_mode:
         pilot = subprocess.Popen(
-            args.pilot, stdin=subprocess.PIPE, stdout=subprocess.PIPE
+            args.pilot,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
         )
         loop_count = 0  # To count iterations to compute the telemetry timestamp
 
@@ -480,9 +482,18 @@ if __name__ == "__main__":
                     *lidar_samples
                 )
             )
+
             pilot.stdin.flush()
             loop_count += 1
+
             cmd = pilot.stdout.read(COMMAND_STRUCT.size)
+
+            if pilot.poll() != None:
+                error = pilot.stderr.readlines()
+                print("Status : FAIL", pilot.returncode, error)
+                result = CRASHED  # The pilot process must have exited
+                break
+
             if len(cmd) != COMMAND_STRUCT.size:
                 result = CRASHED  # The pilot process must have exited
                 break
@@ -492,7 +503,7 @@ if __name__ == "__main__":
                 _,
             ) = COMMAND_STRUCT.unpack(cmd)
             lateral_airspeed = max(-30.0, min(30.0, lateral_airspeed_input))
-            print(lateral_airspeed)
+
             drop_package_commanded = bool(drop_package_commanded_byte)
             print("Airspeed: ", lateral_airspeed_input)
             print("Drop: ", drop_package_commanded)

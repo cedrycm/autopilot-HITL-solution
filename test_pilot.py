@@ -26,16 +26,15 @@ def run_pilot(pilot_select="AUTO"):
             try:
                 # for tele_input in TELEMETRY_STRUCT.iter_unpack(sys.stdin.buffer.read()):
                 tele_input = bytearray(stdin.read(TELEMETRY_STRUCT.size))
-                if tele_input != None:
+                if (len(tele_input) == 44):
                     pilot.interpret_telemetry(tele_input)
                     pilot.send_command()
+                else:
+                    break
 
-                # if "Exit" == tele_input:
-                #     break
-
-            except (BrokenPipeError, IOError):
+            except (EOFError, BrokenPipeError, IOError, TimeoutError):
                 # ignore subprocess flush command
-                pass
+                break
 
 
 if __name__ == "__main__":

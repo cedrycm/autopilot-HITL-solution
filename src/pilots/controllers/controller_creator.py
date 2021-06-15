@@ -4,6 +4,7 @@ from enum import IntFlag
 import serial
 import time
 import struct
+import sys
 
 from .controller_components import SpeedController, PackageController
 from zip_sim import TELEMETRY_STRUCT, COMMAND_STRUCT
@@ -176,12 +177,22 @@ class ArduinoController(AutoController):
         return (lateral_airspeed, drop_flag)
 
     def __send_packet(self, buffer):
+        payload = None
         tx = b"\x10\x02"  # start sequence
         tx += struct.pack("<B", 44)  # length of data
-        tx += buffer
+        tx += bytes(buffer)
         tx += struct.pack("<B", self.__calc_checksum(buffer))
         tx += b"\x10\x03"  # end sequence
         self.arduino.write(tx)
+        # start_time = time.time()
+        # while payload == None and time.time() < (start_time + arduino["timeout"]):
+        #     payload = self.__read_packet()
+
+        # end_time = time.time()
+        # tot = end_time - start_time
+        # str_time = "Round Trip Time: " + str(tot)
+
+        # return None
 
     def __emergency_command(self):
         """Returns emergency command to negate lateral wind velocity if
@@ -189,8 +200,8 @@ class ArduinoController(AutoController):
 
         returns empty after arbitrary 10 tries"""
 
-        if self.emergency_counter < 10:
-            telemetry = TELEMETRY_STRUCT.unpack(self.telemetry_buffer)
+        if self.emergency_counter < 5:
+            telemetry = TELEMETRY_STRUCT.unpack(bytes(self.telemetry_buffer))
             v_y = float(telemetry[3]) * -1
             self.emergency_counter += 1
 
@@ -208,62 +219,33 @@ class ArduinoController(AutoController):
         """
         :return received data in the packet if read sucessfully, else return None
         """
-        # check start sequence
-        if self.arduino.read() != b"\x10":
-            return None
+        try:
+            # check start sequence
+            if self.arduino.read() != b"\x10":
+                return None
 
-        if self.arduino.read() != b"\x02":
-            return None
+            if self.arduino.read() != b"\x02":
+                return None
 
-        payload_len = self.arduino.read()[0]
-        if payload_len != ARDUINO_COMMAND_STRUCT.size:
-            # could be other type of packet, but not implemented for now
-            return None
+            payload_len = self.arduino.read()[0]
+            if payload_len != ARDUINO_COMMAND_STRUCT.size:
+                # could be other type of packet, but not implemented for now
+                return None
 
-        # we don't know if it is valid yet
-        payload = self.arduino.read(payload_len)
+            # we don't know if it is valid yet
+            payload = self.arduino.read(payload_len)
 
-        checksum = self.arduino.read()[0]
-        if checksum != self.__calc_checksum(payload):
-            return None  # checksum error
+            checksum = self.arduino.read()[0]
+            if checksum != self.__calc_checksum(payload):
+                return None  # checksum error
 
-        # check end sequence
-        if self.arduino.read() != b"\x10":
-            return None
-        if self.arduino.read() != b"\x03":
-            return None
-
-        # yeah valid packet received
-        return payload
-
-
-# class ArduinoController2(AutoController):
-#     def __init__(self):
-#         self.arduino = serial.Serial(
-#             arduino["port"], timeout=arduino["timeout"], baudrate=arduino["baud"]
-#         )
-#         time.sleep(1)
-#         self.telemetry_buffer = None
-#         self.emergency_counter = 0
-
-#     def receive_data(self, telemetry_buffer):
-#         # method for autopilot1 to interpret telemetry data
-#         telemetry = TELEMETRY_STRUCT.unpack(telemetry_buffer)
-
-#         tx_data = {
-#             "timestamp": telemetry[0],
-#             "recovery_x_error": telemetry[1],
-#             "wind_vector_x": float(telemetry[2]),
-#             "wind_vector_y": float(telemetry[3]),
-#             "recovery_y_error": telemetry[4],
-#             "lidar_samples": list(telemetry[5:])[::-1],
-#         }
-#         self.telemetry_buffer = telemetry
-
-#         self.__send_packet(telemetry_buffer)
-
-#     def return_data(self):
-#         pass
-
-#     def __send_packet(self, telemetry_buffer):
-#         pass
+            # check end sequence
+            if self.arduino.read() != b"\x10":
+                return None
+            if self.arduino.read() != b"\x03":
+                return None
+            # yeah valid packet received
+            return payload
+        except arduino.SerialTimeoutException:
+            sys.stderr.write("Controller has timed out.\n")
+            raise TimeoutError
