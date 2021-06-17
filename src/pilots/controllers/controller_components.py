@@ -261,11 +261,10 @@ class SpeedController(Detector):
         # update lateral airspeed using kinematics of lateral component
         if distance is None:
             theta = self.theta
-        else:
-            if distance[0] != 0:
+        elif distance[0] != 0:
                 theta = degrees(atan(distance[1] / distance[0]))
-            else:
-                theta = 0
+        else:
+            theta = 0
         #update airspeed        
         self._v_y = (v_x_sum * atan(radians(theta))) - self._wind_vector_y      
 
