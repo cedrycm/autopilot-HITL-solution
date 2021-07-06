@@ -76,8 +76,8 @@ class AutoController1(AutoController):
 
     def __init__(self, speed_controller, package_controller):
         self._flag_status = PilotFlags.APPROACH_TARGET
-        self.speed_ctrl = speed_controller
-        self.package_ctrl = package_controller
+        self._speed_ctrl = speed_controller
+        self._package_ctrl = package_controller
         # self._d_rel = None
 
         super().__init__()
@@ -94,69 +94,69 @@ class AutoController1(AutoController):
         lidar_samples = list(telemetry[5:])[::-1]
 
         # update the speed controller
-        self.speed_ctrl.speed_inputs(wind_vector_x, wind_vector_y, lidar_samples)
+        self._speed_ctrl.speed_inputs(wind_vector_x, wind_vector_y, lidar_samples)
 
         if recovery_x_error < 100.00 or self._flag_status == PilotFlags.RECOVER:
             self._flag_status = PilotFlags.RECOVER
-            self.speed_ctrl.update_airspeed(
+            self._speed_ctrl.update_airspeed(
                 distance=(recovery_x_error, recovery_y_error)
             )
 
         elif (
             # if object is diameter is larger that lidar_delivery_diameter check if collision avoidance is needed
-            self.speed_ctrl.d_1_2 != None
-            and self.speed_ctrl.d_1_2 > LIDAR_DELIVERY_DIAMETER
+            self._speed_ctrl.d_1_2 != None
+            and self._speed_ctrl.d_1_2 > LIDAR_DELIVERY_DIAMETER
         ):
             if (
-                self.speed_ctrl.distance[0] < VEHICLE_AVOID_THRESHOLD
-                and self.speed_ctrl.distance[1] < LAT_AVOIDANCE_DISTANCE
+                self._speed_ctrl.distance[0] < VEHICLE_AVOID_THRESHOLD
+                and self._speed_ctrl.distance[1] < LAT_AVOIDANCE_DISTANCE
             ):
                 self._flag_status = PilotFlags.AVOID_COLLISION
                 # change target distance to be away from tree collision boundary
-                self.speed_ctrl.avoid_collision(lidar_samples)
-                self.speed_ctrl.update_airspeed()
-        elif self.speed_ctrl.d_1_2 != None:
+                self._speed_ctrl.avoid_collision(lidar_samples)
+                self._speed_ctrl.update_airspeed()
+        elif self._speed_ctrl.d_1_2 != None:
             self._flag_status = PilotFlags.APPROACH_TARGET
-            self.speed_ctrl.update_airspeed()
+            self._speed_ctrl.update_airspeed()
 
             v_x_sum = VEHICLE_AIRSPEED + wind_vector_x
-            v_y_sum = self.speed_ctrl.v_y + wind_vector_y
+            v_y_sum = self._speed_ctrl.v_y + wind_vector_y
 
             """Issue where packages were being dropped to trees on the corner of the lidar scans
             set lidar boundary to not drop if the object is located at the edges of vehicle bounds"""
             # TODO: adjust lateral speed with proportion to distance from the center of lidar scanner
-            if abs(self.speed_ctrl.theta) < 10.0:
+            if abs(self._speed_ctrl.theta) < 10.0:
                 # update the package controller to check for drop
                 self._d_rel = (v_x_sum * PACKAGE_FALL_SEC, v_y_sum * PACKAGE_FALL_SEC)
-                self.package_ctrl.update_target_params(
-                    position=self.speed_ctrl._distance,
+                self._package_ctrl.update_target_params(
+                    position=self._speed_ctrl._distance,
                     current_drop_pos=self._d_rel,
                     current_time=timestamp,
                 )
-            elif abs(self.speed_ctrl.theta) < 12.0:
+            elif abs(self._speed_ctrl.theta) < 12.0:
                 # increase the speed by 20% if target is on the edges of the lidar boundary
-                self.speed_ctrl._v_y = self.speed_ctrl.v_y * 1.2
-            elif abs(self.speed_ctrl.theta) > 12.0:
+                self._speed_ctrl._v_y = self._speed_ctrl.v_y * 1.2
+            elif abs(self._speed_ctrl.theta) > 12.0:
                 # increase the speed by 20% if target is on the edges of the lidar boundary
-                self.speed_ctrl._v_y = self.speed_ctrl.v_y * 1.5
+                self._speed_ctrl._v_y = self._speed_ctrl.v_y * 1.5
 
     def return_data(self):
-        return (self.speed_ctrl.v_y, self.package_ctrl.drop_status)
+        return (self._speed_ctrl.v_y, self._package_ctrl.drop_status)
 
 
 class ArduinoController(AutoController):
     def __init__(self):
-        self.arduino = serial.Serial(
+        self._arduino = serial.Serial(
             arduino["port"], timeout=arduino["timeout"], baudrate=arduino["baud"]
         )
         time.sleep(1)
-        self.telemetry_buffer = None
-        self.emergency_counter = 0
+        self._telemetry_buffer = None
+        self._emergency_counter = 0
 
     def receive_data(self, telemetry_buffer):
         if telemetry_buffer != None:
             # store telemetry for emergency case
-            self.telemetry_buffer = telemetry_buffer
+            self._telemetry_buffer = telemetry_buffer
             self.__send_packet(telemetry_buffer)
 
     def return_data(self):
@@ -183,7 +183,7 @@ class ArduinoController(AutoController):
         tx += bytes(buffer)
         tx += struct.pack("<B", self.__calc_checksum(buffer))
         tx += b"\x10\x03"  # end sequence
-        self.arduino.write(tx)
+        self._arduino.write(tx)
         # start_time = time.time()
         # while payload == None and time.time() < (start_time + arduino["timeout"]):
         #     payload = self.__read_packet()
@@ -200,10 +200,10 @@ class ArduinoController(AutoController):
 
         returns empty after arbitrary 10 tries"""
 
-        if self.emergency_counter < 5:
-            telemetry = TELEMETRY_STRUCT.unpack(bytes(self.telemetry_buffer))
+        if self._emergency_counter < 5:
+            telemetry = TELEMETRY_STRUCT.unpack(bytes(self._telemetry_buffer))
             v_y = float(telemetry[3]) * -1
-            self.emergency_counter += 1
+            self._emergency_counter += 1
 
             return (v_y, 0)
         else:
@@ -221,31 +221,31 @@ class ArduinoController(AutoController):
         """
         try:
             # check start sequence
-            if self.arduino.read() != b"\x10":
+            if self._arduino.read() != b"\x10":
                 return None
 
-            if self.arduino.read() != b"\x02":
+            if self._arduino.read() != b"\x02":
                 return None
 
-            payload_len = self.arduino.read()[0]
+            payload_len = self._arduino.read()[0]
             if payload_len != ARDUINO_COMMAND_STRUCT.size:
                 # could be other type of packet, but not implemented for now
                 return None
 
             # we don't know if it is valid yet
-            payload = self.arduino.read(payload_len)
+            payload = self._arduino.read(payload_len)
 
-            checksum = self.arduino.read()[0]
+            checksum = self._arduino.read()[0]
             if checksum != self.__calc_checksum(payload):
                 return None  # checksum error
 
             # check end sequence
-            if self.arduino.read() != b"\x10":
+            if self._arduino.read() != b"\x10":
                 return None
-            if self.arduino.read() != b"\x03":
+            if self._arduino.read() != b"\x03":
                 return None
             # yeah valid packet received
             return payload
-        except arduino.SerialTimeoutException:
+        except self._arduino.SerialTimeoutException:
             sys.stderr.write("Controller has timed out.\n")
             raise TimeoutError

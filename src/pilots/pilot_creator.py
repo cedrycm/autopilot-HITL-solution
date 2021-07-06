@@ -6,7 +6,7 @@ from typing import Type
 import serial
 
 # concrete classes
-from .pilot_concrete import Autopilot1, ManualPilot1
+from .pilot_concrete import Autopilot, ManualPilot
 
 from .controllers.controller_creator import AutoControlCreator
 
@@ -19,9 +19,11 @@ class PilotDirector:
     @classmethod
     def select_pilot(self, pilot_id: str):
         if pilot_id == "MANUAL":
-            return ManualPilotCreator.create_pilot(pilot_id)
+            pilotCreator = ManualPilotCreator(pilot_id)
+            return pilotCreator.create_pilot()
         else:
-            return AutoPilotCreator.create_pilot(pilot_id)
+            pilotCreator = AutoPilotCreator(pilot_id)
+            return pilotCreator.create_pilot()
 
 
 # ------CREATOR AND BASE CLASS DEFINITIONS----------------------------------------------
@@ -40,19 +42,24 @@ class AutoPilotCreator(PilotCreator):
     # AP IDs:
     # 1: AUTO: Path Kinematics-based Autopilot Controller
     # 2: UNO: Arduino Autopilot MicroController over serial bus
-    @classmethod
-    def create_pilot(self, autopilot_id: str):
-        controller = AutoControlCreator.create_controller(autopilot_id)
-        return Autopilot1(controller)
+    def __init__(self, pilot_id) -> None:
+        super().__init__()
+        self.pilot_id = pilot_id
+    def create_pilot(self):
+        controller = AutoControlCreator.create_controller(self.pilot_id)
+        return Autopilot(self.pilot_id, controller)
 
 
 class ManualPilotCreator(PilotCreator):
     # skeleton class for creating different types of pilots
     # ManualPilot(MP) Class creates pilot
-    # TODO 1: MANUAL: Should implement controller interrupts to control lateral velocity & drop
-    @classmethod
-    def create_pilot(self, pilot_id: int):
-        return ManualPilot1()
+    # 1: MANUAL: implements controller interrupts to control lateral velocity & drop
+    def __init__(self, pilot_id) -> None:
+        super().__init__()
+        self.pilot_id = pilot_id
+
+    def create_pilot(self):
+        return ManualPilot(self.pilot_id)
 
 
 # remove comment below for debuging autopilot class instance

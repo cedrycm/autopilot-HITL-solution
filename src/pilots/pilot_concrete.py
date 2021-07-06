@@ -7,34 +7,13 @@ import keyboard
 
 from zip_sim import TELEMETRY_STRUCT, COMMAND_STRUCT
 
-# ----------BASE CLASS DEFINITIONS----------------------------------------------
+# ----------INTERFACE CLASS DEFINITIONS----------------------------------------------
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-class Pilot(ABC):
-    @abstractmethod
-    def interpret_telemetry(self):
-        # abstract method for pilot to interpret telemetry received
-        pass
+class IPilot(ABC):
+    def __init__(self, pilot_id):
+        self.pilot_id = pilot_id
 
-    @abstractmethod
-    def send_command(self):
-        # abstract method for pilot to prepare command
-        pass
-
-
-class AutoPilot(Pilot):
-    @abstractmethod
-    def interpret_telemetry(self):
-        # abstract method for pilot to interpret telemetry received
-        pass
-
-    @abstractmethod
-    def send_command(self):
-        # abstract method for pilot to prepare command
-        pass
-
-
-class ManualPilot(Pilot):
     @abstractmethod
     def interpret_telemetry(self):
         # abstract method for pilot to interpret telemetry received
@@ -49,15 +28,16 @@ class ManualPilot(Pilot):
 # ------CONCRETE CLASS DEFINITIONS----------------------------------------------
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-class Autopilot1(AutoPilot):
+class Autopilot(IPilot):
     _padding = "zip"
 
-    def __init__(self, controller):
-        self.ctrl = controller
+    def __init__(self, pilot_id, controller):
+        super().__init__(pilot_id)
+        self._ctrl = controller
 
     def send_command(self):
         # retrieve data from controller
-        (v_y, drop_status) = self.ctrl.return_data()
+        (v_y, drop_status) = self._ctrl.return_data()
 
         # create tuple for command
         cmd = COMMAND_STRUCT.pack(
@@ -76,22 +56,23 @@ class Autopilot1(AutoPilot):
 
     def interpret_telemetry(self, telemetry_buffer):
         # method for autopilot1 to interpret telemetry data
-        self.ctrl.receive_data(telemetry_buffer)
+        self._ctrl.receive_data(telemetry_buffer)
         return None
 
 
-class ManualPilot1(ManualPilot):
+class ManualPilot(IPilot):
     _padding = "zip"
 
-    def __init__(self):
+    def __init__(self, pilot_id):
+        super().__init__(pilot_id)
         self._lateral_airspeed = 0
         self._drop_package_commanded = 0
-        self._drop_timestamp = 0 
+        self._drop_timestamp = 0
         self._timestamp = 0
 
     # skeleton class for manualpilot implementation
     def interpret_telemetry(self, telemetry_buffer):
-        #save instance of timestamp
+        # save instance of timestamp
         telemetry = TELEMETRY_STRUCT.unpack(telemetry_buffer)
         self._timestamp = telemetry[0]
         return None
