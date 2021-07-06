@@ -1,32 +1,29 @@
 import sys
 
-
-from collections import namedtuple
-
 from zip_sim import TELEMETRY_STRUCT
-from src.pilots.pilot_creator import select_autopilot, select_manualpilot
+from src.pilots.pilot_creator import PilotDirector
 
 # set stdin to read bytes
 stdin = sys.stdin.buffer
 
 
 def run_pilot(pilot_select="AUTO"):
-    """autopilot selection is done with the provided function
-
-    -for autopilots use 'select_autopilot()
-    -for manual piloting use 'select_manualpilot()"""
+    """pilot selection is done with the provided string values:
+        -"AUTO"   : Default python concrete autopilot class
+        -"UNO"    : uses controller as interface for embedded arduino uno solution
+                    see config.py for arduino init parameters
+        -"MANUAL" : Uses keyboard as controller for pilot"""
 
     if (
-        pilot_select == "AUTO" or pilot_select == "UNO"
+        pilot_select == "AUTO" or pilot_select == "UNO" or pilot_select == "MANUAL"
     ):  # currently only two pilot implementations
         # Concrete Pilot Selection
-        pilot = select_autopilot(pilot_select)
+        pilot = PilotDirector.select_pilot(pilot_select)
 
         while True:
             try:
-                # for tele_input in TELEMETRY_STRUCT.iter_unpack(sys.stdin.buffer.read()):
                 tele_input = bytearray(stdin.read(TELEMETRY_STRUCT.size))
-                if (len(tele_input) == 44):
+                if len(tele_input) == 44:
                     pilot.interpret_telemetry(tele_input)
                     pilot.send_command()
                 else:

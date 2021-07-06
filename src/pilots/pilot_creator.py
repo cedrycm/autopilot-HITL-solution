@@ -15,14 +15,13 @@ from .controllers.controller_creator import AutoControlCreator
 # # -----------------------------------------------------------------------------------
 # # -----------------------------------------------------------------------------------
 # Import functions below to create concrete pilot classes
-
-
-def select_autopilot(autopilot_id: str):
-    return AutoPilotCreator.create_pilot(autopilot_id)
-
-
-def select_manualpilot(pilot_id: int):
-    return ManualPilotCreator.create_pilot(pilot_id)
+class PilotDirector:
+    @classmethod
+    def select_pilot(self, pilot_id: str):
+        if pilot_id == "MANUAL":
+            return ManualPilotCreator.create_pilot(pilot_id)
+        else:
+            return AutoPilotCreator.create_pilot(pilot_id)
 
 
 # ------CREATOR AND BASE CLASS DEFINITIONS----------------------------------------------
@@ -50,10 +49,10 @@ class AutoPilotCreator(PilotCreator):
 class ManualPilotCreator(PilotCreator):
     # skeleton class for creating different types of pilots
     # ManualPilot(MP) Class creates pilot
+    # TODO 1: MANUAL: Should implement controller interrupts to control lateral velocity & drop
     @classmethod
     def create_pilot(self, pilot_id: int):
-        if pilot_id == 1:
-            return ManualPilot1()
+        return ManualPilot1()
 
 
 # remove comment below for debuging autopilot class instance
