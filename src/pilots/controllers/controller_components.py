@@ -310,6 +310,10 @@ class PackageController:
         self.check_target(current_drop_pos, current_time)
         return None
 
+    #TODO sometimes target will not flag a drop when a delivery site has been detected 
+    # might me because of the way the Detector class interprets the target object 
+    # try checking for drop by using instance of samples 
+
     def check_target(self, current_drop_pos, current_time):
         # find if target is within drop buffer zone
         time_elapsed = current_time - self._drop_timestamp
