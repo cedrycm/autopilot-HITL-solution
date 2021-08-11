@@ -104,7 +104,7 @@ The [test_pilot](https://github.com/cedrycm/zip-autopilot-solution/blob/master/t
 
 To run the simulation with the [AutoPilot-uno](https://github.com/cedrycm/autopilot-uno) controller, use the following command: 
 ```
-python zip_sim.py python test_pilot.py AUTO 
+python zip_sim.py python test_pilot.py UNO 
 ```
 This allows you to select an interface to pipe data to and from the simulation to an Arduino through the ArduinoController interface located in [controller_creator](https://github.com/cedrycm/zip-autopilot-solution/blob/master/src/pilots/controllers/controller_creator.py)
 
